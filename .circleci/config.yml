@@ -1,0 +1,213 @@
+version: 2.1
+
+orbs:
+  jira: nutrien/ddc-jira-connect@1
+  ddc: nutrien/ddc-common@2
+  sonarqube: nutrien/ddc-sonarqube@1
+
+aliases:
+  - &dev-filter
+    branches:
+      ignore:
+        - master
+        - main
+  - &staging-filter
+    tags:
+      only:
+        - /^QA-v(\d+\.)?(\d+\.)?(\*|\d+)$/
+    branches:
+      ignore: /.*/
+  - &prod-filter
+    tags:
+      only: /^v(\d+\.)?(\d+\.)?(\*|\d+)$/
+    branches:
+      ignore: /.*/
+  - &source-path
+    src/Student.Api.Template.Infrastructure
+
+executors:
+  default:
+    docker:
+      - image: ghcr.io/nutrien/dotnet-sdk:6.0-focal-node18
+        auth:
+          username: ExperienceGitHubAdmin
+          password: $GITHUB_AUTH_TOKEN
+
+commands:
+  install-node-packages:
+    steps:
+      - ddc/install-node-packages:
+          pkg-manager: pnpm
+          pkg-manager-version: "8"
+
+jobs:
+  build:
+    executor: default
+    resource_class: small
+    parameters:
+      source-path:
+        type: string
+        default: *source-path
+    steps:
+      - checkout
+      - ddc/configure-npmrc
+      - ddc/configure-nuget
+      - install-node-packages
+      - ddc/install-node-packages:
+          app-dir: << parameters.source-path >>
+      - run:
+          name: Compile
+          command: pnpm run gulp Build
+      - run:
+          name: Package
+          command: pnpm run gulp CIPackage
+      - run: 
+          name: Compile CDK
+          working_directory: << parameters.source-path >>
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - << parameters.source-path >>/bin
+  unit-tests:
+    executor: default
+    resource_class: small  
+    steps:
+      - checkout
+      - ddc/configure-npmrc
+      - ddc/configure-nuget
+      - install-node-packages
+      - run:
+          name: Run tests
+          working_directory: .
+          command: pnpm run gulp CITest
+      - run:
+          name: Collect opencover reports
+          command: |
+            mkdir -p ./TestResults/opencover/
+            find ./ -type f -name coverage.opencover.xml -exec mv {} ./TestResults/opencover/ \;
+      - store_artifacts:
+          path: ./TestResults
+      - store_test_results:
+          path: ./junit
+      - persist_to_workspace:
+          root: .
+          paths:
+            - TestResults
+  deploy:
+    executor: default
+    resource_class: small
+    parameters:
+      npm-script:
+        type: string
+        default: deploy
+      source-path:
+        type: string
+        default: *source-path
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - ddc/get-aws-token
+      - ddc/configure-npmrc
+      - ddc/install-node-packages:
+          app-dir: << parameters.source-path >>
+      - run:
+          name: Deploy
+          working_directory: << parameters.source-path >>
+          command: npm run << parameters.npm-script >>
+          no_output_timeout: 30m
+
+workflows:
+  ci-master:
+    jobs:
+      - build:
+          context: ddc-hello
+          post-steps:
+            - jira/notify:
+                environment_type: development
+                job_type: build
+          filters:
+            branches:
+              only: master
+      - unit-tests:
+          context: ddc-dev
+          requires:
+            - build
+  ci-dev:
+    jobs:
+      - ddc/gitleaks:
+          filters:
+            branches:
+              ignore:
+                - master
+                - main
+      - build:
+          name: build [dev]
+          context: ddc-hello
+          post-steps:
+            - jira/notify:
+                environment_type: development
+                job_type: build
+          filters: *dev-filter
+      - unit-tests:
+          context: ddc-hello
+          requires:
+            - build [dev]
+      - ddc/cfn-guard:
+          context: ddc-hello
+          app-dir: *source-path
+          attach-workspace: true
+          requires:
+            - build [dev]
+      # - sonarqube/be-scan:
+      #     context: sonarqube
+      #     configure-nuget: false
+      #     requires:
+      #       - unit-tests
+      - deploy:
+          context: ddc-dev
+          post-steps:
+            - jira/notify:
+                environment: ${ENV}
+                environment_type: development
+                job_type: deployment
+          requires:
+            - unit-tests
+            - ddc/gitleaks
+  ci-staging:
+    jobs:
+      - build:
+          context: ddc-staging
+          filters: *staging-filter
+      - deploy:
+          context: ddc-staging
+          post-steps:
+            - jira/notify:
+                environment: ${ENV}
+                environment_type: staging
+                job_type: deployment
+          filters: *staging-filter
+          requires:
+            - build
+  ci-prod:
+    jobs:
+      - build:
+          context: ddc-prod
+          filters: *prod-filter
+      - approve-deploy:
+          type: approval
+          filters: *prod-filter
+          requires:
+            - build
+      - deploy:
+          context: ddc-prod
+          post-steps:
+            - jira/notify:
+                environment: ${ENV}
+                environment_type: production
+                job_type: deployment
+          filters: *prod-filter
+          requires:
+            - approve-deploy

@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>Tests</RootNamespace>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+     <PackageReference Include="BCrypt.Net-Next" Version="4.0.0" />
+        <PackageReference Include="CsvHelper" Version="15.0.6" />
+        <PackageReference Include="FluentAssertions" Version="5.10.3" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
+        <PackageReference Include="Moq" Version="4.14.6" />
+        <PackageReference Include="Nutrien.Shared" Version="1.0.223" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="System.Net.Http.Json" Version="3.2.1" />
+        <PackageReference Include="Xerris.DotNet.Core" Version="0.0.80" />
+        <PackageReference Include="Xerris.DotNet.Core.Aws" Version="0.0.82" />
+        <PackageReference Include="Xerris.DotNet.TestAutomation" Version="0.0.2" />
+        <PackageReference Include="xunit" Version="2.4.1" />
+        <PackageReference Include="JunitXml.TestLogger" Version="2.1.78" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.4.3" />     
+  </ItemGroup>
+  <ItemGroup>
+    <DotNetCliToolReference Include="JetBrains.dotCover.DotNetCliTool" Version="2019.2.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Student.Api.Template.Services\Student.Api.Template.Services.csproj" />
+    <ProjectReference Include="..\Student.Api.Template\Student.Api.Template.csproj" />
+  </ItemGroup>
+</Project>

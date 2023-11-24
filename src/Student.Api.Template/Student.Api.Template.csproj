@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <AWSProjectType>Lambda</AWSProjectType>
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="NLog.config.xml" />
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.prod.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.stage.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Amazon.Lambda.APIGatewayEvents" Version="2.3.0" />
+        <PackageReference Include="Amazon.Lambda.Core" Version="1.2.0" />
+        <PackageReference Include="Amazon.Lambda.Serialization.Json" Version="1.8.0" />
+        <PackageReference Include="Amazon.Lambda.Serialization.SystemTextJson" Version="2.1.0" />
+        <PackageReference Include="Nutrien.Shared" Version="1.0.223" />
+        <PackageReference Include="Serilog" Version="2.10.0" />
+        <PackageReference Include="Xerris.DotNet.Core" Version="0.0.80" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Student.Api.Template.Services\Student.Api.Template.Services.csproj" />
+  </ItemGroup>
+</Project>

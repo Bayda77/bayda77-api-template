@@ -1,0 +1,3 @@
+/.circleci/config.yml @nutrien/ddc-devops
+/.gitleaksignore @nutrien/ddc-devops
+/.github @nutrien/ddc-devops
